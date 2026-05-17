@@ -1,0 +1,816 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dutch Coach — DKV Taaltrainer</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      /* ── Taal-specific layout ─────────────────────────────────── */
+      .taal-shell {
+        min-height: 100vh;
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+
+      .taal-topbar {
+        min-height: 72px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px 20px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--line);
+        flex-wrap: wrap;
+      }
+
+      .taal-brand h1 {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.05;
+      }
+
+      .taal-brand .eyebrow {
+        margin: 0 0 3px;
+      }
+
+      /* Tab bar */
+      .module-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--line);
+        background: var(--surface);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .module-tab {
+        flex: 1 0 auto;
+        min-width: 120px;
+        border: 0;
+        border-right: 1px solid var(--line);
+        border-radius: 0;
+        background: var(--surface-2);
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 700;
+        min-height: 48px;
+        padding: 0 14px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 0.12s;
+      }
+
+      .module-tab:last-child { border-right: 0; }
+
+      .module-tab.active {
+        background: var(--surface);
+        color: var(--ink);
+        box-shadow: inset 0 -3px 0 var(--blue);
+      }
+
+      /* Module panels */
+      .module-panel {
+        display: none;
+        padding: 20px;
+        max-width: 760px;
+        margin: 0 auto;
+        width: 100%;
+      }
+
+      .module-panel.active { display: block; }
+
+      /* ── Flashcard ────────────────────────────────────────────── */
+      .fc-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+
+      .fc-controls label {
+        flex: 0 0 auto;
+      }
+
+      .fc-controls select {
+        width: auto;
+        min-width: 160px;
+      }
+
+      .fc-progress-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-left: auto;
+      }
+
+      .fc-progress-bar {
+        width: 140px;
+        height: 8px;
+        background: var(--line);
+        border-radius: 4px;
+        overflow: hidden;
+      }
+
+      .fc-progress-bar-fill {
+        height: 100%;
+        background: var(--green);
+        transition: width 0.3s;
+        border-radius: 4px;
+      }
+
+      .fc-progress-label {
+        font-size: 13px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .flashcard {
+        perspective: 900px;
+        height: 260px;
+        cursor: pointer;
+        margin-bottom: 16px;
+      }
+
+      .flashcard-inner {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        transform-style: preserve-3d;
+        transition: transform 0.42s cubic-bezier(0.45, 0.05, 0.55, 0.95);
+      }
+
+      .flashcard.flipped .flashcard-inner {
+        transform: rotateY(180deg);
+      }
+
+      .flashcard-face {
+        position: absolute;
+        inset: 0;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 24px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        text-align: center;
+      }
+
+      .flashcard-face.back {
+        transform: rotateY(180deg);
+        background: var(--blue-2);
+        border-color: rgba(47, 115, 183, 0.3);
+      }
+
+      .fc-word {
+        font-size: 22px;
+        font-weight: 800;
+        color: var(--ink);
+        line-height: 1.3;
+      }
+
+      .fc-category-badge {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--muted);
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        padding: 3px 8px;
+      }
+
+      .fc-farsi {
+        font-size: 20px;
+        color: var(--ink);
+        direction: rtl;
+        line-height: 1.4;
+      }
+
+      .fc-english {
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .fc-flip-hint {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .fc-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .btn-know {
+        background: var(--green);
+        color: #fff;
+        border-color: var(--green);
+        font-weight: 800;
+        padding: 0 22px;
+      }
+
+      .btn-retry {
+        background: var(--red-2);
+        color: var(--red);
+        border-color: var(--red);
+        font-weight: 800;
+        padding: 0 22px;
+      }
+
+      .btn-tts {
+        background: var(--violet-2);
+        color: var(--violet);
+        border-color: var(--violet);
+        font-size: 18px;
+        padding: 0 14px;
+      }
+
+      .fc-empty {
+        text-align: center;
+        padding: 40px;
+        color: var(--muted);
+        border: 1px dashed var(--line);
+      }
+
+      .fc-empty .fc-empty-icon { font-size: 40px; margin-bottom: 10px; }
+
+      /* ── Pronunciation ────────────────────────────────────────── */
+      .pr-card {
+        border: 1px solid var(--line);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        padding: 28px 24px;
+        text-align: center;
+        margin-bottom: 16px;
+      }
+
+      .pr-word {
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--ink);
+        margin-bottom: 6px;
+        line-height: 1.2;
+      }
+
+      .pr-hint {
+        color: var(--muted);
+        font-size: 14px;
+        margin-bottom: 20px;
+      }
+
+      .pr-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .pr-result {
+        margin-top: 16px;
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        display: none;
+      }
+
+      .pr-result.visible { display: block; }
+
+      .pr-result.match {
+        border-color: var(--green);
+        background: var(--green-2);
+      }
+
+      .pr-result.mismatch {
+        border-color: var(--red);
+        background: var(--red-2);
+      }
+
+      .pr-result-label {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      .pr-result-text {
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .pr-result.match .pr-result-text { color: var(--green); }
+      .pr-result.mismatch .pr-result-text { color: var(--red); }
+
+      .pr-next-row {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 10px;
+      }
+
+      /* ── Listening ────────────────────────────────────────────── */
+      .ls-score-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .ls-score-box {
+        display: grid;
+        grid-template-columns: auto auto;
+        gap: 0;
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+      }
+
+      .ls-score-box span {
+        padding: 8px 14px;
+        border-right: 1px solid var(--line);
+        font-size: 20px;
+        font-weight: 800;
+      }
+
+      .ls-score-box span:last-child { border-right: 0; }
+
+      .ls-score-label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .ls-card {
+        border: 1px solid var(--line);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        padding: 20px;
+        margin-bottom: 16px;
+      }
+
+      .ls-sentence-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .ls-sentence-text {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--ink);
+        opacity: 0;
+        transition: opacity 0.3s;
+        flex: 1;
+        line-height: 1.4;
+      }
+
+      .ls-sentence-text.revealed { opacity: 1; }
+
+      .ls-question {
+        font-size: 15px;
+        color: var(--ink);
+        margin-bottom: 10px;
+        font-weight: 600;
+        line-height: 1.4;
+      }
+
+      .ls-question-farsi {
+        font-size: 13px;
+        color: var(--muted);
+        direction: rtl;
+        text-align: right;
+        margin-bottom: 12px;
+      }
+
+      .ls-answer-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .ls-answer-input {
+        flex: 1;
+        height: 44px;
+        padding: 0 12px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--ink);
+        font: inherit;
+        font-size: 15px;
+        min-height: auto;
+      }
+
+      .ls-answer-input:focus {
+        outline: 2px solid rgba(47, 115, 183, 0.3);
+        outline-offset: 2px;
+      }
+
+      .ls-feedback {
+        margin-top: 12px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        display: none;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .ls-feedback.visible { display: block; }
+      .ls-feedback.correct { border-color: var(--green); background: var(--green-2); color: var(--green); }
+      .ls-feedback.wrong   { border-color: var(--red);   background: var(--red-2);   color: var(--red); }
+
+      /* ── Zinsbouw ─────────────────────────────────────────────── */
+      .zb-topic-card {
+        border: 1px solid var(--line);
+        background: var(--blue-2);
+        padding: 14px 16px;
+        margin-bottom: 14px;
+      }
+
+      .zb-topic-label {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+
+      .zb-topic-text {
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--ink);
+      }
+
+      .zb-input-area {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .zb-textarea {
+        flex: 1;
+        min-height: 80px;
+        resize: vertical;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--ink);
+        font: inherit;
+        font-size: 15px;
+        line-height: 1.45;
+      }
+
+      .zb-textarea:focus {
+        outline: 2px solid rgba(47, 115, 183, 0.3);
+        outline-offset: 2px;
+      }
+
+      .zb-mic-col {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        justify-content: flex-start;
+      }
+
+      .zb-action-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
+
+      .btn-primary {
+        background: var(--blue);
+        color: #fff;
+        border-color: var(--blue);
+        font-weight: 800;
+        padding: 0 20px;
+      }
+
+      .btn-secondary {
+        background: var(--surface);
+        color: var(--ink);
+        border-color: var(--line);
+        padding: 0 16px;
+      }
+
+      .zb-result {
+        display: none;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        padding: 16px;
+        margin-bottom: 12px;
+      }
+
+      .zb-result.visible { display: block; }
+
+      .zb-result-section {
+        margin-bottom: 14px;
+      }
+
+      .zb-result-section:last-child { margin-bottom: 0; }
+
+      .zb-result-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 5px;
+      }
+
+      .zb-original-text {
+        font-size: 15px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .zb-corrected-text {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--green);
+        line-height: 1.5;
+      }
+
+      .zb-explanation-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 7px;
+      }
+
+      .zb-explanation-list li {
+        padding: 8px 10px;
+        border-left: 3px solid var(--amber);
+        background: var(--amber-2);
+        font-size: 14px;
+        line-height: 1.45;
+        color: var(--ink);
+      }
+
+      .zb-explanation-list li.correct-note {
+        border-color: var(--green);
+        background: var(--green-2);
+      }
+
+      .zb-tts-row {
+        margin-top: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      /* ── Loading spinner ─────────────────────────────────────── */
+      .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid var(--line);
+        border-top-color: var(--blue);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        vertical-align: middle;
+        margin-right: 6px;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      /* ── Shared helpers ───────────────────────────────────────── */
+      .section-head {
+        font-size: 20px;
+        font-weight: 800;
+        color: var(--ink);
+        margin: 0 0 4px;
+      }
+
+      .section-sub {
+        font-size: 14px;
+        color: var(--muted);
+        margin: 0 0 18px;
+      }
+
+      .divider {
+        border: 0;
+        border-top: 1px solid var(--line);
+        margin: 20px 0;
+      }
+
+      @media (max-width: 600px) {
+        .module-panel { padding: 14px; }
+        .pr-word { font-size: 22px; }
+        .fc-word  { font-size: 18px; }
+        .flashcard { height: 220px; }
+        .module-tab { font-size: 12px; min-width: 80px; padding: 0 8px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="taal-shell">
+      <!-- Top bar -->
+      <header class="taal-topbar">
+        <div class="taal-brand">
+          <p class="eyebrow">DKV Taaltrainer</p>
+          <h1>Dutch Coach</h1>
+        </div>
+        <div class="top-actions">
+          <span class="ai-status" id="aiStatus">…</span>
+          <a class="source-link" href="/">← DKV Trainer</a>
+        </div>
+      </header>
+
+      <!-- Module tab bar -->
+      <nav class="module-tabs" role="tablist" aria-label="Taalmodules">
+        <button class="module-tab active" role="tab" data-module="woordenschat" aria-selected="true">
+          🔤 Woordenschat
+        </button>
+        <button class="module-tab" role="tab" data-module="uitspraak" aria-selected="false">
+          🔊 Uitspraak
+        </button>
+        <button class="module-tab" role="tab" data-module="luisteren" aria-selected="false">
+          👂 Luisteren
+        </button>
+        <button class="module-tab" role="tab" data-module="zinsbouw" aria-selected="false">
+          ✍️ Zinsbouw
+        </button>
+      </nav>
+
+      <!-- ══ MODULE 1: WOORDENSCHAT ══════════════════════════════════ -->
+      <section class="module-panel active" id="panel-woordenschat" role="tabpanel">
+        <h2 class="section-head">Woordenschat</h2>
+        <p class="section-sub">Medisch Nederlands — klik de kaart om te draaien</p>
+
+        <div class="fc-controls">
+          <label for="catFilter">Categorie</label>
+          <select id="catFilter">
+            <option value="all">Alle categorieën</option>
+            <option value="Consult">Consult</option>
+            <option value="Samenvatting">Samenvatting</option>
+            <option value="Uitleg">Uitleg &amp; Beleid</option>
+            <option value="Safety net">Safety net</option>
+            <option value="Klachten">Klachten</option>
+            <option value="Lichaamsdelen">Lichaamsdelen</option>
+            <option value="Grammatica">Grammatica</option>
+          </select>
+          <div class="fc-progress-wrap">
+            <div class="fc-progress-bar" role="progressbar" aria-label="Voortgang" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+              <div class="fc-progress-bar-fill" id="fcProgressFill" style="width:0%"></div>
+            </div>
+            <span class="fc-progress-label" id="fcProgressLabel">0 / 0 bekend</span>
+          </div>
+        </div>
+
+        <!-- Flashcard -->
+        <div class="flashcard" id="flashcard" aria-label="Flashcard — klik om te draaien" tabindex="0" role="button">
+          <div class="flashcard-inner" id="flashcardInner">
+            <div class="flashcard-face front">
+              <span class="fc-category-badge" id="fcCategory">—</span>
+              <p class="fc-word" id="fcFront">Laden…</p>
+              <p class="fc-flip-hint">Klik om de vertaling te zien</p>
+            </div>
+            <div class="flashcard-face back">
+              <p class="fc-farsi" id="fcFarsi" dir="rtl">…</p>
+              <p class="fc-english" id="fcEnglish">…</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="fc-buttons" id="fcButtons">
+          <button class="btn-tts" id="fcTts" title="Hoor uitspraak" aria-label="Hoor uitspraak">🔊</button>
+          <button class="btn-know" id="fcKnow">✓ Ken ik</button>
+          <button class="btn-retry" id="fcRetry">✗ Nog oefenen</button>
+        </div>
+
+        <div class="fc-empty" id="fcEmpty" style="display:none">
+          <div class="fc-empty-icon">🎉</div>
+          <strong>Alle kaarten bekend!</strong>
+          <p>Selecteer een andere categorie of reset.</p>
+          <button class="btn-secondary" id="fcReset" style="margin-top:12px">Opnieuw beginnen</button>
+        </div>
+      </section>
+
+      <!-- ══ MODULE 2: UITSPRAAK ══════════════════════════════════════ -->
+      <section class="module-panel" id="panel-uitspraak" role="tabpanel">
+        <h2 class="section-head">Uitspraaktrainer</h2>
+        <p class="section-sub">Luister, spreek in en vergelijk — medische woorden die moeilijk zijn voor Perzischsprekenden</p>
+
+        <div class="pr-card">
+          <p class="fc-category-badge" id="prCategory" style="display:inline-block;margin-bottom:12px">—</p>
+          <p class="pr-word" id="prWord">Laden…</p>
+          <p class="pr-hint" id="prHint"></p>
+          <div class="pr-buttons">
+            <button class="btn-tts" id="prTts" title="Hoor correcte uitspraak" aria-label="Hoor uitspraak">🔊 Hoor</button>
+            <button class="mic-button" id="prMic" title="Neem op en vergelijk" aria-label="Opnemen">🎙 Spreek</button>
+          </div>
+        </div>
+
+        <div class="pr-result" id="prResult">
+          <p class="pr-result-label">U zei:</p>
+          <p class="pr-result-text" id="prResultText"></p>
+          <p class="pr-result-label" style="margin-top:10px">Correct:</p>
+          <p class="pr-result-text" id="prCorrectText" style="color:var(--ink);font-weight:600"></p>
+        </div>
+
+        <div class="pr-next-row">
+          <button class="btn-primary" id="prNext">Volgend woord →</button>
+        </div>
+      </section>
+
+      <!-- ══ MODULE 3: LUISTEREN ══════════════════════════════════════ -->
+      <section class="module-panel" id="panel-luisteren" role="tabpanel">
+        <h2 class="section-head">Luistervaardigheid</h2>
+        <p class="section-sub">Luister naar de patiëntzin en beantwoord de begripsvraag</p>
+
+        <div class="ls-score-row">
+          <div class="ls-score-box" aria-label="Score">
+            <span id="lsCorrect">0</span>
+            <span id="lsTotal">0</span>
+          </div>
+          <span class="ls-score-label">goed / totaal</span>
+        </div>
+
+        <div class="ls-card">
+          <div class="ls-sentence-row">
+            <button class="btn-tts" id="lsTts" title="Speel patiëntzin af" aria-label="Afspelen">🔊 Herhaal</button>
+            <span class="ls-sentence-text" id="lsSentenceText" aria-live="polite"></span>
+          </div>
+
+          <p class="ls-question" id="lsQuestion">Laden…</p>
+          <p class="ls-question-farsi" id="lsQuestionFarsi"></p>
+
+          <div class="ls-answer-row">
+            <input
+              class="ls-answer-input"
+              type="text"
+              id="lsAnswer"
+              placeholder="Typ uw antwoord…"
+              autocomplete="off"
+              aria-label="Uw antwoord"
+            />
+            <button class="btn-primary" id="lsCheck">Controleer</button>
+          </div>
+
+          <div class="ls-feedback" id="lsFeedback" aria-live="assertive"></div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px">
+          <button class="btn-secondary" id="lsReveal">Toon zin</button>
+          <button class="btn-primary" id="lsNext">Volgende →</button>
+        </div>
+      </section>
+
+      <!-- ══ MODULE 4: ZINSBOUW ══════════════════════════════════════ -->
+      <section class="module-panel" id="panel-zinsbouw" role="tabpanel">
+        <h2 class="section-head">Zinsbouw coach</h2>
+        <p class="section-sub">Schrijf een Nederlandse medische zin — de AI corrigeert en legt uit</p>
+
+        <div class="zb-topic-card">
+          <p class="zb-topic-label">Onderwerp</p>
+          <p class="zb-topic-text" id="zbTopicText">Laden…</p>
+        </div>
+
+        <div class="zb-input-area">
+          <textarea
+            class="zb-textarea"
+            id="zbInput"
+            placeholder="Schrijf hier uw Nederlandse zin…"
+            aria-label="Uw Nederlandse zin"
+          ></textarea>
+          <div class="zb-mic-col">
+            <button class="mic-button" id="zbMic" title="Spreek in het Nederlands" aria-label="Spreek in">🎙</button>
+          </div>
+        </div>
+
+        <div class="zb-action-row">
+          <button class="btn-primary" id="zbCorrect">Corrigeer</button>
+          <button class="btn-secondary" id="zbNewTopic">Nieuw onderwerp</button>
+        </div>
+
+        <div class="zb-result" id="zbResult" aria-live="polite">
+          <div class="zb-result-section">
+            <p class="zb-result-label">Uw zin (origineel)</p>
+            <p class="zb-original-text" id="zbOriginal"></p>
+          </div>
+          <div class="zb-result-section">
+            <p class="zb-result-label">Gecorrigeerd</p>
+            <p class="zb-corrected-text" id="zbCorrected"></p>
+          </div>
+          <div class="zb-result-section">
+            <p class="zb-result-label">Uitleg</p>
+            <ul class="zb-explanation-list" id="zbExplanation"></ul>
+          </div>
+          <div class="zb-tts-row">
+            <button class="btn-tts" id="zbTts" title="Hoor de gecorrigeerde zin">🔊 Hoor gecorrigeerde zin</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script src="taal.js"></script>
+  </body>
+</html>
